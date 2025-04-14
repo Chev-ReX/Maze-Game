@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Maze Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Maze Game</h1>
+    <div id="game-container">
+        <div id="player"></div>
+        <div id="goal"></div>
+        <!-- Walls will be created by JavaScript -->
+    </div>
+    <div id="message"></div>
+    <div id="controls">
+        <p>Use WASD or Arrow Keys to move</p>
+        <button onclick="resetGame()">Reset Game</button>
+        <button onclick="emergencyReset()">Emergency Reset (If Stuck)</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
