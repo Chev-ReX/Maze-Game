@@ -1,76 +1,78 @@
-// Game configuration
 const config = {
-    width: 400,
-    height: 300,
     playerSize: 20,
-    playerSpeed: 5
+    playerSpeed: 5,
+    currentLevel: 0,
+    twoPlayerMode: false
 };
 
 // Game elements
 const gameContainer = document.getElementById('game-container');
-const player = document.getElementById('player');
+const player1 = document.getElementById('player1');
+const player2 = document.getElementById('player2');
 const goal = document.getElementById('goal');
 const message = document.getElementById('message');
+const levelNumber = document.getElementById('level-number');
 
-// Set game container size
-gameContainer.style.width = config.width + 'px';
-gameContainer.style.height = config.height + 'px';
-
-// Player position
-let playerPosition = {
-    x: 40,
-    y: 40
-};
-
-// Goal position
-const goalPosition = {
-    x: config.width - 60,
-    y: config.height - 60
-};
-
-// Define walls - format: [x, y, width, height]
-// Adjusted walls to ensure there's always a clear path
-const walls = [
-    [100, 0, 20, 180],      // Left gap at bottom
-    [200, 120, 20, 180],    // Left gap at top
-    [300, 0, 20, 180],      // Left gap at bottom
-    [0, 150, 80, 20],       // Smaller wall
-    [150, 250, 150, 20],    // Bottom wall
-    [250, 50, 130, 20]      // Upper right wall
-];
+// Player positions
+let player1Position = { x: 0, y: 0 };
+let player2Position = { x: 0, y: 0 };
+let goalPosition = { x: 0, y: 0 };
 
 // Keys pressed state
 const keysPressed = {};
 
 // Initialize the game
 function initGame() {
-    // Set game container dimensions
-    gameContainer.style.width = config.width + 'px';
-    gameContainer.style.height = config.height + 'px';
-
-    // Place player
-    updatePlayerPosition();
-
-    // Place goal
-    goal.style.left = goalPosition.x + 'px';
-    goal.style.top = goalPosition.y + 'px';
-
-    // Create walls
-    createWalls();
-
+    loadLevel(config.currentLevel);
+    
     // Add event listeners
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
-
+    
+    // Update player 2 visibility based on mode
+    player2.style.display = config.twoPlayerMode ? 'block' : 'none';
+    
     // Start game loop
     gameLoop();
 }
 
-// Create wall elements
-function createWalls() {
-    // Clear existing walls first
+// Load a specific level
+function loadLevel(levelIndex) {
+    // Clear existing walls
     document.querySelectorAll('.wall').forEach(wall => wall.remove());
     
+    // Get level data
+    const level = LEVELS[levelIndex];
+    
+    // Update level number display
+    levelNumber.textContent = levelIndex + 1;
+    
+    // Set game container dimensions
+    gameContainer.style.width = level.size.width + 'px';
+    gameContainer.style.height = level.size.height + 'px';
+    
+    // Set player positions
+    player1Position = { ...level.player1Start };
+    player2Position = { ...level.player2Start };
+    
+    // Set goal position
+    goalPosition = { ...level.goalPos };
+    goal.style.left = goalPosition.x + 'px';
+    goal.style.top = goalPosition.y + 'px';
+    
+    // Update player positions on screen
+    updatePlayerPositions();
+    
+    // Create walls
+    createWalls(level.walls);
+    
+    // Clear message
+    message.textContent = "";
+    message.style.color = "#333";
+}
+
+// Create wall elements
+function createWalls(walls) {
     walls.forEach((wall, index) => {
         const wallElement = document.createElement('div');
         wallElement.className = 'wall';
@@ -85,7 +87,7 @@ function createWalls() {
 // Handle key down
 function handleKeyDown(e) {
     keysPressed[e.key] = true;
-    // Prevent page scrolling with arrow keys and WASD
+    // Prevent page scrolling with movement keys
     if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) {
         e.preventDefault();
     }
@@ -101,14 +103,16 @@ function handleKeyUp(e) {
 
 // Game loop
 function gameLoop() {
-    movePlayer();
-    checkCollisions();
+    movePlayer1();
+    if (config.twoPlayerMode) {
+        movePlayer2();
+    }
     checkWin();
     requestAnimationFrame(gameLoop);
 }
 
-// Move player based on keys pressed
-function movePlayer() {
+// Move player 1 based on WASD keys
+function movePlayer1() {
     let dx = 0;
     let dy = 0;
 
@@ -126,6 +130,14 @@ function movePlayer() {
         dx += config.playerSpeed;
     }
 
+    movePlayer(player1Position, dx, dy, 1);
+}
+
+// Move player 2 based on arrow keys
+function movePlayer2() {
+    let dx = 0;
+    let dy = 0;
+
     // Arrow key controls
     if (keysPressed['ArrowUp']) {
         dy -= config.playerSpeed;
@@ -140,25 +152,55 @@ function movePlayer() {
         dx += config.playerSpeed;
     }
 
-    // Calculate new position
-    let newX = playerPosition.x + dx;
-    let newY = playerPosition.y + dy;
+    movePlayer(player2Position, dx, dy, 2);
+}
 
-    // Check boundaries - better boundary checking
+// Common player movement logic
+function movePlayer(playerPos, dx, dy, playerNum) {
+    if (dx === 0 && dy === 0) return;
+    
+    // Get current level data
+    const level = LEVELS[config.currentLevel];
+    
+    // Calculate new position
+    let newX = playerPos.x + dx;
+    let newY = playerPos.y + dy;
+
+    // Check boundaries
     if (newX < 0) newX = 0;
     if (newY < 0) newY = 0;
-    if (newX > config.width - config.playerSize) newX = config.width - config.playerSize;
-    if (newY > config.height - config.playerSize) newY = config.height - config.playerSize;
+    if (newX > level.size.width - config.playerSize) {
+        newX = level.size.width - config.playerSize;
+    }
+    if (newY > level.size.height - config.playerSize) {
+        newY = level.size.height - config.playerSize;
+    }
 
     // Check if the new position would cause a collision
     const wouldCollide = checkWallCollision(newX, newY);
     
     // Only update position if no collision would occur
     if (!wouldCollide) {
-        playerPosition.x = newX;
-        playerPosition.y = newY;
-        updatePlayerPosition();
+        playerPos.x = newX;
+        playerPos.y = newY;
+        
+        // Update player position on screen
+        if (playerNum === 1) {
+            player1.style.left = playerPos.x + 'px';
+            player1.style.top = playerPos.y + 'px';
+        } else {
+            player2.style.left = playerPos.x + 'px';
+            player2.style.top = playerPos.y + 'px';
+        }
     }
+}
+
+// Update both player positions on screen
+function updatePlayerPositions() {
+    player1.style.left = player1Position.x + 'px';
+    player1.style.top = player1Position.y + 'px';
+    player2.style.left = player2Position.x + 'px';
+    player2.style.top = player2Position.y + 'px';
 }
 
 // Check if a position would collide with any wall
@@ -170,8 +212,10 @@ function checkWallCollision(x, y) {
         bottom: y + config.playerSize
     };
 
+    const level = LEVELS[config.currentLevel];
+
     // Check each wall
-    for (const wall of walls) {
+    for (const wall of level.walls) {
         const wallRect = {
             left: wall[0],
             top: wall[1],
@@ -192,84 +236,76 @@ function checkWallCollision(x, y) {
     return false; // No collision
 }
 
-// Update player element position
-function updatePlayerPosition() {
-    player.style.left = playerPosition.x + 'px';
-    player.style.top = playerPosition.y + 'px';
-}
+// Check if either player has reached the goal
+function checkWin() {
+    // Check player 1
+    const distance1 = Math.sqrt(
+        Math.pow(player1Position.x - goalPosition.x, 2) +
+        Math.pow(player1Position.y - goalPosition.y, 2)
+    );
+    
+    // Check player 2 if in two player mode
+    const distance2 = config.twoPlayerMode ? Math.sqrt(
+        Math.pow(player2Position.x - goalPosition.x, 2) +
+        Math.pow(player2Position.y - goalPosition.y, 2)
+    ) : Infinity;
 
-// Check for collisions with walls (this is now just for visual feedback)
-function checkCollisions() {
-    const playerRect = {
-        left: playerPosition.x,
-        top: playerPosition.y,
-        right: playerPosition.x + config.playerSize,
-        bottom: playerPosition.y + config.playerSize
-    };
-
-    // Check each wall
-    for (const wall of walls) {
-        const wallRect = {
-            left: wall[0],
-            top: wall[1],
-            right: wall[0] + wall[2],
-            bottom: wall[1] + wall[3]
-        };
-
-        // Check for collision
-        if (
-            playerRect.right > wallRect.left &&
-            playerRect.left < wallRect.right &&
-            playerRect.bottom > wallRect.top &&
-            playerRect.top < wallRect.bottom
-        ) {
-            // Just show a message, but don't reset position to avoid trapping
-            message.textContent = "You're touching a wall! Be careful.";
+    if (distance1 < config.playerSize || distance2 < config.playerSize) {
+        // Determine which player won
+        let winMessage = "";
+        if (distance1 < config.playerSize && distance2 < config.playerSize) {
+            winMessage = "Both players reached the goal together!";
+        } else if (distance1 < config.playerSize) {
+            winMessage = "Player 1 reached the goal!";
+        } else {
+            winMessage = "Player 2 reached the goal!";
+        }
+        
+        // Check if there are more levels
+        if (config.currentLevel < LEVELS.length - 1) {
+            message.textContent = winMessage + " Advancing to next level...";
+            message.style.color = "green";
+            
+            // Go to next level after a delay
             setTimeout(() => {
-                message.textContent = "";
-            }, 1000);
-            return;
+                config.currentLevel++;
+                loadLevel(config.currentLevel);
+            }, 2000);
+        } else {
+            // Game completed
+            message.textContent = winMessage + " You completed all levels!";
+            message.style.color = "green";
         }
     }
 }
 
-// Check if player has reached the goal
-function checkWin() {
-    const distance = Math.sqrt(
-        Math.pow(playerPosition.x - goalPosition.x, 2) +
-        Math.pow(playerPosition.y - goalPosition.y, 2)
-    );
-
-    if (distance < config.playerSize) {
-        message.textContent = "Congratulations! You reached the goal!";
-        message.style.color = "green";
-        // Disable controls
-        document.removeEventListener('keydown', handleKeyDown);
-        document.removeEventListener('keyup', handleKeyUp);
-    }
-}
-
-// Reset the game
+// Reset the current level
 function resetGame() {
-    playerPosition.x = 40;
-    playerPosition.y = 40;
-    updatePlayerPosition();
-    message.textContent = "";
-    message.style.color = "#333";
-    
-    // Re-add event listeners
-    document.removeEventListener('keydown', handleKeyDown);
-    document.removeEventListener('keyup', handleKeyUp);
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
+    loadLevel(config.currentLevel);
 }
 
-// Emergency reset - teleport player to a safe location
+// Emergency reset - teleport players to starting positions
 function emergencyReset() {
-    playerPosition.x = 40;
-    playerPosition.y = 40;
-    updatePlayerPosition();
+    const level = LEVELS[config.currentLevel];
+    player1Position = { ...level.player1Start };
+    player2Position = { ...level.player2Start };
+    updatePlayerPositions();
+    
     message.textContent = "Emergency reset applied!";
+    setTimeout(() => {
+        message.textContent = "";
+    }, 2000);
+}
+
+// Toggle between 1 player and 2 player modes
+function togglePlayers() {
+    config.twoPlayerMode = !config.twoPlayerMode;
+    player2.style.display = config.twoPlayerMode ? 'block' : 'none';
+    
+    message.textContent = config.twoPlayerMode ? 
+        "Two player mode activated!" : 
+        "One player mode activated!";
+    
     setTimeout(() => {
         message.textContent = "";
     }, 2000);
