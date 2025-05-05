@@ -3,36 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiplayer Maze Game</title>
+    <title>Simple Maze Game</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Multiplayer Maze Game</h1>
-    <div id="level-info">Level: <span id="level-number">1</span></div>
+    <h1>Maze Game</h1>
     <div id="game-container">
-        <div id="player1" class="player"></div>
-        <div id="player2" class="player"></div>
+        <div id="player"></div>
         <div id="goal"></div>
         <!-- Walls will be created by JavaScript -->
     </div>
     <div id="message"></div>
     <div id="controls">
-        <div class="controls-section">
-            <h3>Player 1 Controls</h3>
-            <p>W = Up | A = Left | S = Down | D = Right</p>
-        </div>
-        <div class="controls-section">
-            <h3>Player 2 Controls</h3>
-            <p>↑ = Up | ← = Left | ↓ = Down | → = Right</p>
-        </div>
-        <div class="game-buttons">
-            <button onclick="resetGame()">Reset Level</button>
-            <button onclick="emergencyReset()">Emergency Reset</button>
-            <button onclick="togglePlayers()">Toggle 1P/2P Mode</button>
-        </div>
+        <p>Use WASD or Arrow Keys to move</p>
+        <button onclick="resetGame()">Reset Game</button>
+        <button onclick="emergencyReset()">Emergency Reset (If Stuck)</button>
     </div>
 
-    <script src="levels.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
